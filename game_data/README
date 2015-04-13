@@ -1,0 +1,2 @@
+This is to contain all the tools to provide information about the present status of the game.
+This is essentially the game manager that takes care of things like legal moves, winning positions etc.
