@@ -1,6 +1,7 @@
 #include <iostream>
 using namespace std;
 
+
 class tic_tac_database
 {
   public :
