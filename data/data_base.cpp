@@ -102,14 +102,21 @@ class tic_tac_database {
     return 'd';
   }
 
+  void declare_result() {
+    if (winning_position())
+      cout << "Winner -------- " << winner() << endl;
+    else if (winner() == 'd')
+      cout << "Draw Dude... Bluh" << endl;
+  }
+
 };
 
 
-class tic_tac_agent {
+class tic_tac_agent_order_0 {
   tic_tac_database tmp;
 
   public :
-    tic_tac_agent(tic_tac_database x) {
+    tic_tac_agent_order_0(tic_tac_database x) {
       present_game_state = x;
     }
     char marker;
@@ -166,19 +173,44 @@ class tic_tac_agent {
 
 };
 
+class tic_tac_agent_order_1 : public tic_tac_agent_order_0 {
+  tic_tac_database tmp;
+
+  public :
+    char marker;
+
+    int compute_next_move() {
+      tic_tac_agent_order_0 player_0(tmp), player_1(tmp);	// Create Two Sample Zero order players to compete (to see further)
+      player_0.marker = marker;
+      player_1.marker = (marker == 'x')? 'o':'x';
+      int x, y, i;
+      int m[4], n[4];
+      for (i=1; i<4; i++) {
+	do {
+	x = rand()%3;
+	y = rand()%3;
+	} while ((!tmp.mark_position(x, y, marker)) && !(tmp.winning_position()));
+	m[i] = x;
+	n[i] = y;
+	player_0.load_game_state(tmp);
+	present_game_state = tmp;
+
+
+      }
+    }
+};
+
 int main() {
   srand (time(NULL));
-  int x, y;
   int i;
-  x = rand()%3;
-  y = rand()%3;
   static tic_tac_database game;
-  tic_tac_agent player_o(game);
-  tic_tac_agent player_x(game);
+  tic_tac_agent_order_0 player_o(game);
+  tic_tac_agent_order_0 player_x(game);
 
   game.reset_game();
   player_o.marker = 'o';
   player_x.marker = 'x';
+
   for (i=1; i<5; i++) {
     player_x.load_game_state(game);
     player_x.compute_next_move();
@@ -195,13 +227,7 @@ int main() {
   game = player_x.present_game_state;
   }
 
-  player_x.load_game_state(game);
-  player_o.load_game_state(game);
-
-  if (game.winning_position())
-    cout << "Winner -------- " << game.winner() << endl;
-  else if (game.winner() == 'd')
-    cout << "Draw Dude... Bluh" << endl;
+  game.declare_result();
 
   return 0;
 }
