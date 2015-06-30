@@ -1,3 +1,9 @@
+#define MAX_PATHS 50
+#define MAX_LOOK_AHEAD 5
+#define POS_COST 1
+#define NEG_COST -1
+#define DRAW_COST 0
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -6,7 +12,12 @@
 using namespace std;
 
 class tic_tac_database {
+  bool disp_m;
+
   public :
+  tic_tac_database(bool disp) {
+    disp_m = disp;
+  }
   char database[3][3];
 
   tic_tac_database() {
@@ -21,6 +32,14 @@ class tic_tac_database {
       for (j=0; j<3; j++)  database[i][j] = 'b';
   }
 
+  void mute_display() {
+    disp_m = 0;
+  }
+
+  void set_display() {
+    disp_m = 1;
+  }
+
   int pos_occupied(int x, int y) {
     if (database[x][y] == 'b') return 0;
     else return 1;
@@ -29,21 +48,21 @@ class tic_tac_database {
   int mark_position(int x, int y, char ch) {
     int i, j;
     if (pos_occupied(x, y)) {
-      cout << "Position Taken Jackass !!!!" << endl;
+      if (disp_m) cout << "Position Taken Jackass !!!!" << endl;
       return 0;
     }
     else if (!((x >= 0) && (x <= 2) && (y >= 0) && (y <= 2) && ((ch != 'x') || (ch != 'o')))) {
-      cout << "Wrong Position Jackass !!!!" << endl;
+      if (disp_m) cout << "Wrong Position Jackass !!!!" << endl;
       return 0;
     }
     else {
       if (!winning_position()) {
 	database[x][y] = ch;
-	display();
+	if (disp_m) display();
 	return 1;
       }
       else {
-	cout << "Your Game is Done Man - Reset" << endl;
+	if (disp_m) cout << "Your Game is Done Man - Reset" << endl;
 	return 0;
       }
     }
@@ -102,11 +121,20 @@ class tic_tac_database {
     return 'd';
   }
 
+  int completion_status() {
+    int i, j;
+    for (i=0; i<3; i++) 
+      for (j=0; j<3; j++) 
+	if (database[i][j] == 'b') return 0;
+    return 1;
+  }
+
+
   void declare_result() {
     if (winning_position())
-      cout << "Winner -------- " << winner() << endl;
+      if (disp_m) cout << "Winner -------- " << winner() << endl;
     else if (winner() == 'd')
-      cout << "Draw Dude... Bluh" << endl;
+      if (disp_m) cout << "Draw Dude... Bluh" << endl;
   }
 
 };
@@ -173,61 +201,228 @@ class tic_tac_agent_order_0 {
 
 };
 
-class tic_tac_agent_order_1 : public tic_tac_agent_order_0 {
+class tic_tac_agent_order_1 {
   tic_tac_database tmp;
 
   public :
+    tic_tac_agent_order_1(tic_tac_database x) {
+      present_game_state = x;
+    }
     char marker;
+    char winner;
+    tic_tac_database present_game_state;
 
     int compute_next_move() {
-      tic_tac_agent_order_0 player_0(tmp), player_1(tmp);	// Create Two Sample Zero order players to compete (to see further)
-      player_0.marker = marker;
-      player_1.marker = (marker == 'x')? 'o':'x';
-      int x, y, i;
-      int m[4], n[4];
-      for (i=1; i<4; i++) {
-	do {
-	x = rand()%3;
-	y = rand()%3;
-	} while ((!tmp.mark_position(x, y, marker)) && !(tmp.winning_position()));
-	m[i] = x;
-	n[i] = y;
-	player_0.load_game_state(tmp);
-	present_game_state = tmp;
+      int x, y, i, j, utility, opt_pos;
+      int cost[MAX_PATHS];
+      int m[MAX_PATHS][MAX_LOOK_AHEAD], n[MAX_PATHS][MAX_LOOK_AHEAD];
+      for (j=0; j<MAX_PATHS; j++) {
+	tmp = present_game_state;
+	tmp.mute_display();
+	tic_tac_agent_order_0 player_0(tmp);
+	tic_tac_agent_order_0 player_1(tmp);	// Create Two Sample Zero order players to compete (to see further)
+	player_0.marker = marker;
+	player_1.marker = (marker == 'x')? 'o':'x';
+	for (i=0; i<MAX_LOOK_AHEAD; i++) {
+	  player_0.load_game_state(tmp);
+	  do {
+	  x = rand()%3;
+	  y = rand()%3;
+	  m[j][i] = x;
+	  n[j][i] = y;	
+	  } while ((!tmp.mark_position(x, y, marker)) && !(tmp.winning_position()));
 
+	  if(!tmp.completion_status()) {
+	    player_1.load_game_state(tmp);
+	    player_1.compute_next_move();
+	  }
 
+	  //for (j=0; j<=i; j++) cout << "(" << m[j] << "," << n[j] << ")";
+	  //cout << endl;
+	  if (compute_cost(player_0, player_1) == NEG_COST) {
+	    i = 0;
+	    tmp = present_game_state;
+	    tmp.mute_display();
+	  }
+	  else if (compute_cost(player_0, player_1) == POS_COST) break;
+	  else {
+	    if (tmp.completion_status()) break;
+	    else continue;
+	  }
+	}
+	cost[j] = (MAX_LOOK_AHEAD - i)*compute_cost(player_0, player_1);
       }
+      utility = cost[0];
+      opt_pos = 0;
+      for (i=0;i<MAX_PATHS;i++)
+	if (cost[i] > utility) opt_pos = i;
+      present_game_state.mark_position(m[opt_pos][0], n[opt_pos][0], marker);
+    }
+
+    int compute_cost(tic_tac_agent_order_0 player_0, tic_tac_agent_order_0 player_1) {
+      winner = tmp.winner();
+      if (winner == player_0.marker) return POS_COST;
+      else if (winner == player_1.marker) return NEG_COST;
+      else return DRAW_COST;
+    }
+
+    int load_game_state(tic_tac_database x) {
+       present_game_state = x;
+       tmp = x;
+       tmp.mute_display();
+    }
+};
+
+class tic_tac_agent_order_2 {
+  tic_tac_database tmp;
+
+  public :
+    tic_tac_agent_order_2(tic_tac_database x) {
+      present_game_state = x;
+    }
+    char marker;
+    char winner;
+    tic_tac_database present_game_state;
+
+    int compute_next_move() {
+      int x, y, i, j, utility, opt_pos, redundant;
+      int cost[MAX_PATHS];
+      int m[MAX_PATHS][MAX_LOOK_AHEAD], n[MAX_PATHS][MAX_LOOK_AHEAD];
+      for (j=0; j<MAX_PATHS; j++) {
+	tmp = present_game_state;
+	tmp.mute_display();
+	tic_tac_agent_order_1 player_0(tmp);
+	tic_tac_agent_order_1 player_1(tmp);	// Create Two Sample Zero order players to compete (to see further)
+	player_0.marker = marker;
+	player_1.marker = (marker == 'x')? 'o':'x';
+	for (i=0; i<MAX_LOOK_AHEAD; i++) {
+	  player_0.load_game_state(tmp);
+	  do {
+	  x = rand()%3;
+	  y = rand()%3;
+	  m[j][i] = x;
+	  n[j][i] = y;
+	  if ((i == 0) && (j != 0))
+ 	    redundant = ((m[j-1][0] == m[j][i]) && (n[j-1][0] == n[j][0]))? 1 : 0;
+	  } while (((!tmp.mark_position(x, y, marker)) && !(tmp.winning_position()) && redundant) || tmp.completion_status());
+
+	  if(!tmp.completion_status()) {
+	    player_1.load_game_state(tmp);
+	    player_1.compute_next_move();
+	  }
+
+	  //for (j=0; j<=i; j++) cout << "(" << m[j] << "," << n[j] << ")";
+	  //cout << endl;
+	  if (compute_cost(player_0, player_1) == NEG_COST) {
+	    i = 0;
+	    tmp = present_game_state;
+	    tmp.mute_display();
+	  }
+	  else if (compute_cost(player_0, player_1) == POS_COST) break;
+	  else {
+	    if (tmp.completion_status()) break;
+	    else continue;
+	  }
+	}
+	cost[j] = (MAX_LOOK_AHEAD - i)*compute_cost(player_0, player_1);
+      }
+      utility = cost[0];
+      opt_pos = 0;
+      for (i=0;i<MAX_PATHS;i++)
+	if (cost[i] > utility) opt_pos = i;
+      present_game_state.mark_position(m[opt_pos][0], n[opt_pos][0], marker);
+    }
+
+    int compute_cost(tic_tac_agent_order_1 player_0, tic_tac_agent_order_1 player_1) {
+      winner = tmp.winner();
+      if (winner == player_0.marker) return POS_COST;
+      else if (winner == player_1.marker) return NEG_COST;
+      else return DRAW_COST;
+    }
+
+    int load_game_state(tic_tac_database x) {
+       present_game_state = x;
+       tmp = x;
+       tmp.mute_display();
     }
 };
 
 int main() {
   srand (time(NULL));
-  int i;
-  static tic_tac_database game;
+  bool display(true);
+  int i, m, n;
+  int p1, p2, d, iter;
+  char ch;
+  p1 = 0;
+  p2 = 0;
+  d = 0;
+  tic_tac_database game(display);
   tic_tac_agent_order_0 player_o(game);
-  tic_tac_agent_order_0 player_x(game);
+  tic_tac_agent_order_1 player_x(game);
+  cout << "Wanna Play --------------- (Y/n) ?" << endl;
+  cin >> ch;
+  if ((ch == 'Y') || (ch == 'y')) {
+    for (iter=0; ((iter<1000) && ((ch == 'Y') || (ch == 'y'))); iter++) {
+      game.reset_game();
+      player_o.marker = 'o';
+      player_x.marker = 'x';
+      for (i=1; i<5; i++) {
+	player_x.load_game_state(game);
+	player_x.compute_next_move();
+	game = player_x.present_game_state;
+	if (game.winning_position()) break;
+	cout << "Enter Row - ";
+	cin >> m;
+	cout << endl;
+	cout << "Enter Col - ";
+	cin >> n;
+	cout << endl;
+	game.mark_position(m, n, 'o');
+	if (game.winning_position()) break;
+      }
+      if (!game.winning_position()) {
+      player_x.load_game_state(game);
+      player_x.compute_next_move();
+      game = player_x.present_game_state;
+      }
 
-  game.reset_game();
-  player_o.marker = 'o';
-  player_x.marker = 'x';
-
-  for (i=1; i<5; i++) {
-    player_x.load_game_state(game);
-    player_x.compute_next_move();
-    game = player_x.present_game_state;
-    if (game.winning_position()) break;
-    player_o.load_game_state(game);
-    player_o.compute_next_move();
-    game = player_o.present_game_state;
-    if (game.winning_position()) break;
+      if (game.winner() == 'x') p1++;
+      else if (game.winner() == 'o') p2++;
+      else d++;
+      game.declare_result();
+      cout << "Wanna Continue --------------- (Y/n) ?" << endl;
+      cin >> ch;
+    }
   }
-  if (!game.winning_position()) {
-  player_x.load_game_state(game);
-  player_x.compute_next_move();
-  game = player_x.present_game_state;
+  else {
+    for (iter=0; iter<1000; iter++) {
+      game.reset_game();
+      player_o.marker = 'o';
+      player_x.marker = 'x';
+      for (i=1; i<5; i++) {
+	player_x.load_game_state(game);
+	player_x.compute_next_move();
+	game = player_x.present_game_state;
+	if (game.winning_position()) break;
+	player_o.load_game_state(game);
+	player_o.compute_next_move();
+	game = player_o.present_game_state;
+	if (game.winning_position()) break;
+      }
+      if (!game.winning_position()) {
+      player_x.load_game_state(game);
+      player_x.compute_next_move();
+      game = player_x.present_game_state;
+      }
+
+      if (game.winner() == 'x') p1++;
+      else if (game.winner() == 'o') p2++;
+      else d++;
+      game.declare_result();
+    }
   }
-
-  game.declare_result();
-
+  cout << "P1 -- " << p1 << endl;
+  cout << "P2 -- " << p2 << endl;
+  cout << "D -- " << d << endl;
   return 0;
 }
