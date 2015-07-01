@@ -1,7 +1,7 @@
 #define MAX_PATHS 50
 #define MAX_LOOK_AHEAD 5
 #define POS_COST 1
-#define NEG_COST -1
+#define NEG_COST -2
 #define DRAW_COST 0
 
 #include <stdio.h>
@@ -129,6 +129,14 @@ class tic_tac_database {
     return 1;
   }
 
+  int slots() {
+    int i, j, count;
+    count = 0;
+    for (i=0; i<3; i++) 
+      for (j=0; j<3; j++) 
+	if (database[i][j] == 'b') count++;
+    return count; 
+  }
 
   void declare_result() {
     if (winning_position())
@@ -202,7 +210,7 @@ class tic_tac_agent_order_0 {
 };
 
 class tic_tac_agent_order_1 {
-  tic_tac_database tmp;
+  tic_tac_database tmp, tmp_1;
 
   public :
     tic_tac_agent_order_1(tic_tac_database x) {
@@ -213,7 +221,7 @@ class tic_tac_agent_order_1 {
     tic_tac_database present_game_state;
 
     int compute_next_move() {
-      int x, y, i, j, utility, opt_pos;
+      int x, y, i, j, k, utility, opt_pos, redundant;
       int cost[MAX_PATHS];
       int m[MAX_PATHS][MAX_LOOK_AHEAD], n[MAX_PATHS][MAX_LOOK_AHEAD];
       for (j=0; j<MAX_PATHS; j++) {
@@ -225,12 +233,106 @@ class tic_tac_agent_order_1 {
 	player_1.marker = (marker == 'x')? 'o':'x';
 	for (i=0; i<MAX_LOOK_AHEAD; i++) {
 	  player_0.load_game_state(tmp);
+	  tmp_1 = tmp;
 	  do {
-	  x = rand()%3;
-	  y = rand()%3;
-	  m[j][i] = x;
-	  n[j][i] = y;	
-	  } while ((!tmp.mark_position(x, y, marker)) && !(tmp.winning_position()));
+	    redundant = 0;
+	    x = rand()%3;
+	    y = rand()%3;
+	    m[j][i] = x;
+	    n[j][i] = y;	
+	    if ((i == 0) && (j != 0) && (tmp_1.slots() != 1)) {
+	      for (k=0; (k<j) && (k < tmp_1.slots()); k++) {
+	        if ((m[j][0] == m[k][0]) && (n[j][0] == n[k][0])) {
+		  redundant = 1;
+		  break;
+		}
+	      }
+	    }
+	  } while ((!tmp_1.mark_position(x, y, marker)) && (!tmp_1.winning_position()) && (!redundant));
+	  tmp = tmp_1;
+
+	  if(!tmp.completion_status()) {
+	    player_1.load_game_state(tmp);
+	    player_1.compute_next_move();
+	  }
+
+	  //for (j=0; j<=i; j++) cout << "(" << m[j] << "," << n[j] << ")";
+	  //cout << endl;
+	  if (compute_cost(player_0, player_1) == NEG_COST) {
+	    i = 0;
+	    tmp = present_game_state;
+	    tmp.mute_display();
+	  }
+	  else if (compute_cost(player_0, player_1) == POS_COST) break;
+	  else {
+	    if (tmp.completion_status()) break;
+	    else continue;
+	  }
+	}
+	cost[j] = (MAX_LOOK_AHEAD - i)*compute_cost(player_0, player_1);
+      }
+      utility = cost[0];
+      opt_pos = 0;
+      for (i=0;i<MAX_PATHS;i++)
+	if (cost[i] > utility) opt_pos = i;
+      present_game_state.mark_position(m[opt_pos][0], n[opt_pos][0], marker);
+    }
+
+    int compute_cost(tic_tac_agent_order_0 player_0, tic_tac_agent_order_0 player_1) {
+      winner = tmp.winner();
+      if (winner == player_0.marker) return POS_COST;
+      else if (winner == player_1.marker) return NEG_COST;
+      else return DRAW_COST;
+    }
+
+    int load_game_state(tic_tac_database x) {
+       present_game_state = x;
+       tmp = x;
+       tmp.mute_display();
+    }
+};
+
+class tic_tac_agent_improved_1 {
+  tic_tac_database tmp, tmp_1;
+
+  public :
+    tic_tac_agent_improved_1(tic_tac_database x) {
+      present_game_state = x;
+    }
+    char marker;
+    char winner;
+    tic_tac_database present_game_state;
+
+    int compute_next_move() {
+      int x, y, i, j, k, utility, opt_pos, redundant;
+      int cost[MAX_PATHS];
+      int m[MAX_PATHS][MAX_LOOK_AHEAD], n[MAX_PATHS][MAX_LOOK_AHEAD];
+      for (j=0; j<MAX_PATHS; j++) {
+	tmp = present_game_state;
+	tmp.mute_display();
+	tic_tac_agent_order_0 player_0(tmp);
+	tic_tac_agent_order_0 player_1(tmp);	// Create Two Sample Zero order players to compete (to see further)
+	player_0.marker = marker;
+	player_1.marker = (marker == 'x')? 'o':'x';
+	for (i=0; i<MAX_LOOK_AHEAD; i++) {
+	  player_0.load_game_state(tmp);
+	  tmp_1 = tmp;
+	  do {
+	    redundant = 0;
+	    x = rand()%3;
+	    y = rand()%3;
+	    m[j][i] = x;
+	    n[j][i] = y;	
+	    if ((i == 0) && (j != 0) && (tmp_1.slots() != 1)) {
+	      for (k=0; (k<j) && (k < tmp_1.slots()); k++) {
+	        if ((m[j][0] == m[k][0]) && (n[j][0] == n[k][0])) {
+		  redundant = 1;
+		  break;
+		}
+	      }
+	    }
+	  } while ((!tmp_1.mark_position(x, y, marker)) && (!tmp_1.winning_position()) && (!redundant));
+	  tmp = tmp_1;
 
 	  if(!tmp.completion_status()) {
 	    player_1.load_game_state(tmp);
