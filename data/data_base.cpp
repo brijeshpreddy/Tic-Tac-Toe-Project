@@ -1,5 +1,5 @@
 #define MAX_PATHS 50
-#define MAX_LOOK_AHEAD 5
+#define MAX_LOOK_AHEAD 4 
 #define POS_COST 1
 #define NEG_COST -2
 #define DRAW_COST 0
@@ -217,11 +217,10 @@ class tic_tac_agent_order_1 {
       present_game_state = x;
     }
     char marker;
-    char winner;
     tic_tac_database present_game_state;
 
     int compute_next_move() {
-      int x, y, i, j, k, utility, opt_pos, redundant;
+      int x, y, i, j, k, utility, opt_pos, redundant, break_count;
       int cost[MAX_PATHS];
       int m[MAX_PATHS][MAX_LOOK_AHEAD], n[MAX_PATHS][MAX_LOOK_AHEAD];
       for (j=0; j<MAX_PATHS; j++) {
@@ -231,7 +230,9 @@ class tic_tac_agent_order_1 {
 	tic_tac_agent_order_0 player_1(tmp);	// Create Two Sample Zero order players to compete (to see further)
 	player_0.marker = marker;
 	player_1.marker = (marker == 'x')? 'o':'x';
-	for (i=0; i<MAX_LOOK_AHEAD; i++) {
+	break_count = 0;
+	for (i=0; ((i<MAX_LOOK_AHEAD) && (break_count <MAX_LOOK_AHEAD)); i++) {
+	  //cout << "I = " << i << endl;
 	  player_0.load_game_state(tmp);
 	  tmp_1 = tmp;
 	  do {
@@ -254,12 +255,16 @@ class tic_tac_agent_order_1 {
 	  if(!tmp.completion_status()) {
 	    player_1.load_game_state(tmp);
 	    player_1.compute_next_move();
+  	    tmp = player_1.present_game_state;
+	    tmp.mute_display();
 	  }
 
 	  //for (j=0; j<=i; j++) cout << "(" << m[j] << "," << n[j] << ")";
 	  //cout << endl;
 	  if (compute_cost(player_0, player_1) == NEG_COST) {
-	    i = 0;
+	    break_count++;
+	    i = -1;
+	  //cout << "I = " << i << endl;
 	    tmp = present_game_state;
 	    tmp.mute_display();
 	  }
@@ -279,6 +284,7 @@ class tic_tac_agent_order_1 {
     }
 
     int compute_cost(tic_tac_agent_order_0 player_0, tic_tac_agent_order_0 player_1) {
+      char winner;
       winner = tmp.winner();
       if (winner == player_0.marker) return POS_COST;
       else if (winner == player_1.marker) return NEG_COST;
@@ -300,7 +306,6 @@ class tic_tac_agent_improved_1 {
       present_game_state = x;
     }
     char marker;
-    char winner;
     tic_tac_database present_game_state;
 
     int compute_next_move() {
@@ -322,7 +327,8 @@ class tic_tac_agent_improved_1 {
 	    x = rand()%3;
 	    y = rand()%3;
 	    m[j][i] = x;
-	    n[j][i] = y;	
+	    n[j][i] = y;
+/*	
 	    if ((i == 0) && (j != 0) && (tmp_1.slots() != 1)) {
 	      for (k=0; (k<j) && (k < tmp_1.slots()); k++) {
 	        if ((m[j][0] == m[k][0]) && (n[j][0] == n[k][0])) {
@@ -331,6 +337,7 @@ class tic_tac_agent_improved_1 {
 		}
 	      }
 	    }
+*/
 	  } while ((!tmp_1.mark_position(x, y, marker)) && (!tmp_1.winning_position()) && (!redundant));
 	  tmp = tmp_1;
 
@@ -362,6 +369,7 @@ class tic_tac_agent_improved_1 {
     }
 
     int compute_cost(tic_tac_agent_order_0 player_0, tic_tac_agent_order_0 player_1) {
+      char winner;
       winner = tmp.winner();
       if (winner == player_0.marker) return POS_COST;
       else if (winner == player_1.marker) return NEG_COST;
@@ -375,15 +383,14 @@ class tic_tac_agent_improved_1 {
     }
 };
 
-class tic_tac_agent_order_2 {
+class tic_tac_agent_recursive {
   tic_tac_database tmp;
 
   public :
-    tic_tac_agent_order_2(tic_tac_database x) {
+    tic_tac_agent_recursive(tic_tac_database x) {
       present_game_state = x;
     }
     char marker;
-    char winner;
     tic_tac_database present_game_state;
 
     int compute_next_move() {
@@ -436,6 +443,7 @@ class tic_tac_agent_order_2 {
     }
 
     int compute_cost(tic_tac_agent_order_1 player_0, tic_tac_agent_order_1 player_1) {
+      char winner;
       winner = tmp.winner();
       if (winner == player_0.marker) return POS_COST;
       else if (winner == player_1.marker) return NEG_COST;
