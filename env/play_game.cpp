@@ -5,10 +5,9 @@
 #define NEG_COST -2
 #define DRAW_COST 0
 */
+
+#include "../agents/FILES_agents.hpp"
 #include "../data/data_base.hpp"
-#include "../agents/agent_order_0.hpp"
-#include "../agents/agent_order_1.hpp"
-#include "../agents/agent_improved.hpp"
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -33,7 +32,7 @@ int main()
   cout << "Wanna Play --------------- (Y/n) ?" << endl;
   cin >> ch;
   if ((ch == 'Y') || (ch == 'y')) {
-    for (iter=0; ((iter<1000) && ((ch == 'Y') || (ch == 'y'))); iter++) {
+    for (iter=0; ((iter<10) && ((ch == 'Y') || (ch == 'y'))); iter++) {
       game.reset_game();
       player_o.marker = 'o';
       player_x.marker = 'x';
@@ -66,7 +65,7 @@ int main()
     }
   }
   else {
-    for (iter=0; iter<1000; iter++) {
+    for (iter=0; iter<10000; iter++) {
       game.reset_game();
       player_o.marker = 'o';
       player_x.marker = 'x';
