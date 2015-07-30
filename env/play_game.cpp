@@ -20,6 +20,7 @@ int main()
 {
   srand (time(NULL));
   bool display(true);
+  int N;
   int i, m, n;
   int p1, p2, d, iter;
   char ch;
@@ -29,6 +30,9 @@ int main()
   tic_tac_database game(display);
   tic_tac_agent_order_0 player_o(game);
   tic_tac_agent_improved player_x(game);
+  cout << "" << endl;
+  cout << "" << endl;
+  cout << "" << endl;
   cout << "Wanna Play --------------- (Y/n) ?" << endl;
   cin >> ch;
   if ((ch == 'Y') || (ch == 'y')) {
@@ -65,7 +69,9 @@ int main()
     }
   }
   else {
-    for (iter=0; iter<10000; iter++) {
+    cout << "Enter Iterations --------------- ";
+    cin >> N;
+    for (iter=0; iter<N; iter++) {
       game.reset_game();
       player_o.marker = 'o';
       player_x.marker = 'x';
