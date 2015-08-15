@@ -10,6 +10,7 @@ g++ -c ../../data/data_base.cpp 2>&1 |& tee -a run.log
 g++ -c ../../agents/agent_order_0.cpp 2>&1 |& tee -a run.log
 g++ -c ../../agents/agent_order_1.cpp 2>&1 |& tee -a run.log
 g++ -c ../../agents/agent_improved.cpp 2>&1 |& tee -a run.log
+g++ -c ../../agents/agent_graph_search.cpp 2>&1 |& tee -a run.log
 
 # Compile game
 g++ -c ../play_game.cpp 2>&1 |& tee -a run.log
